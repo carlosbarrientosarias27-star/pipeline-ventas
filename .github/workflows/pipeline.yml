@@ -1,0 +1,40 @@
+name: Pipeline Ventas con Cobertura
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test-and-coverage:
+    runs-on: ubuntu-latest
+    strategy:
+      # fail-fast: false permite que si falla la 3.14, las demás sigan corriendo
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11", "3.12", "3.13", "3.14-dev"]
+        
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: 📦 Instalar dependencias
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          
+      - name: 🧪 Ejecutar tests + cobertura mínima 80%
+        run: pytest tests/ -v --cov=src --cov-fail-under=80
+
+      - name: 📊 Generar reporte de cobertura HTML
+        run: pytest tests/ --cov=src --cov-report=html
+
+      - name: 💾 Subir reporte como artefacto
+        uses: actions/upload-artifact@v4
+        with:
+          name: cobertura-html
+          path: htmlcov/
